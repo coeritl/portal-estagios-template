@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="pt-BR">
+<head><script src="assets/campus-config.js"></script><script src="assets/campus-runtime.js" defer></script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Painel de Estágios | COERI</title>
+  <link rel="stylesheet" href="assets/styles.css?v=20260720-1">
+  <link rel="stylesheet" href="assets/admin.css?v=20260724-2">
+</head>
+<body class="admin-body">
+  <main id="admin-root">
+    <section class="login-screen" id="login-screen">
+      <div class="login-card">
+        <a class="admin-brand" href="./" aria-label="Voltar ao portal de estágios"><img src="assets/logo-campus.svg" alt="IFMS Campus SEU CAMPUS"></a>
+        <span class="admin-kicker">Área restrita · COERI</span>
+        <h1>Controle de estágios</h1>
+        <p>Acesse com a conta administrativa autorizada.</p>
+        <div class="setup-notice" id="setup-notice" hidden><strong>Conexão pendente</strong><span>Informe os dados do novo projeto Supabase no arquivo de configuração para ativar o painel.</span></div>
+        <form id="login-form" class="admin-form">
+          <label>E-mail institucional<input id="login-email" type="email" autocomplete="username" required placeholder="coeri.SEUCAMPUS@ifms.edu.br"></label>
+          <label>Senha<input id="login-password" type="password" autocomplete="current-password" required minlength="6"></label>
+          <button class="admin-button primary" type="submit">Entrar no painel</button>
+          <p class="form-message" id="login-message" role="alert"></p>
+        </form>
+        <a class="back-link" href="./">← Voltar ao portal público</a>
+      </div>
+    </section>
+
+    <section class="dashboard" id="dashboard" hidden>
+      <header class="admin-header">
+        <div class="admin-header-inner">
+          <a class="admin-brand compact" href="./"><img src="assets/logo-campus.svg" alt="IFMS Campus SEU CAMPUS"></a>
+          <div class="admin-header-title"><span>COERI</span><strong>Controle de estágios</strong></div>
+          <div class="admin-account"><span id="admin-email"></span><button class="admin-button ghost" id="logout-button" type="button">Sair</button></div>
+        </div>
+      </header>
+
+      <div class="admin-container">
+        <div class="dashboard-heading"><div><span class="admin-kicker">Visão geral</span><h1>Acompanhamento dos estagiários</h1><p id="today-label"></p></div><div class="heading-actions"><div class="action-menus"><details class="action-menu"><summary>Comunicação</summary><div class="action-menu-panel"><span class="action-menu-label">Cobrança de relatórios</span><button id="copy-partial-emails" type="button">Copiar e-mails · parcial</button><button id="copy-final-emails" type="button">Copiar e-mails · final</button><button class="bulk-sent" id="mark-copied-emails-sent" type="button" disabled>Marcar última lista como enviada</button></div></details><details class="action-menu"><summary>Importar dados</summary><div class="action-menu-panel"><span class="action-menu-label">Atualização em lote</span><button id="import-academic-button" type="button">Estágios do Sistema Acadêmico</button><button id="import-students-button" type="button">Dados dos estudantes</button><button id="import-agreements-button" type="button">Convênios</button></div></details><details class="action-menu"><summary>Exportar</summary><div class="action-menu-panel"><span class="action-menu-label">Listas administrativas</span><button id="export-ifms-button" type="button">Seguro dos estagiários IFMS</button></div></details></div><button class="admin-button primary new-internship-action" id="new-internship-button" type="button">+ Novo estágio</button></div></div>
+
+        <nav class="admin-tabs" aria-label="Áreas do painel">
+          <button class="admin-tab active" type="button" data-admin-view="tracking">Acompanhamento</button>
+          <button class="admin-tab" type="button" data-admin-view="requests">Novos TCEs <span id="tce-request-count">0</span></button>
+          <button class="admin-tab" type="button" data-admin-view="reports">Relatórios recebidos <span id="report-count">0</span></button>
+          <button class="admin-tab" type="button" data-admin-view="advisors">Orientadores <span id="advisor-count">0</span></button>
+          <button class="admin-tab" type="button" data-admin-view="maintenance">Manutenção</button>
+        </nav>
+
+        <div id="tracking-view">
+
+        <section class="stat-grid" aria-label="Resumo dos estágios">
+          <article class="stat-card"><span>Em andamento</span><strong id="stat-active">0</strong><small>estágios ativos</small></article>
+          <article class="stat-card warning"><span>Com prazo próximo</span><strong id="stat-soon">0</strong><small>próximos 7 dias</small></article>
+          <article class="stat-card danger"><span>Prazos atingidos</span><strong id="stat-due">0</strong><small>aguardando providência</small></article>
+        </section>
+
+        <section class="admin-panel filters-panel">
+          <div class="search-field"><label for="search-input">Pesquisar</label><input id="search-input" type="search" placeholder="Nome, curso ou empresa"></div>
+          <label>Prazos<select id="deadline-filter"><option value="all">Todos</option><option value="due">Atingidos</option><option value="soon">Próximos 7 dias</option><option value="ok">No prazo</option></select></label>
+        </section>
+
+        <section class="list-group" aria-labelledby="pending-list-title">
+          <div class="list-heading"><div><span class="admin-kicker">Acompanhamento</span><h2 id="pending-list-title">Pendências de aviso</h2></div><span class="list-count" id="pending-list-count">0</span></div>
+          <section class="internship-list" id="internship-list" aria-live="polite"></section>
+        </section>
+        <section class="list-group sent-group" id="sent-group" aria-labelledby="sent-list-title">
+          <div class="list-heading"><div><span class="admin-kicker">Organizados</span><h2 id="sent-list-title">Avisos enviados</h2></div><span class="list-count" id="sent-list-count">0</span></div>
+          <section class="internship-list" id="sent-internship-list" aria-live="polite"></section>
+        </section>
+        <div class="empty-state" id="empty-state" hidden><div>📋</div><h2>Nenhum estágio encontrado</h2><p>Cadastre um estágio ou altere os filtros selecionados.</p></div>
+        </div>
+
+        <section id="requests-view" hidden>
+          <div class="requests-intro"><div><span class="admin-kicker">Fila de entrada</span><h2>Solicitações de TCE</h2><p>Os dados completos permanecem nesta área restrita até o TCE ser gerado.</p></div></div>
+          <section class="tce-request-list" id="tce-request-list" aria-live="polite"></section>
+          <div class="empty-state" id="tce-empty-state"><div>✅</div><h2>Nenhuma solicitação nova</h2><p>As próximas solicitações aparecerão aqui.</p></div>
+        </section>
+
+        <section id="reports-view" hidden>
+          <div class="requests-intro"><div><span class="admin-kicker">Documentos enviados</span><h2>Relatórios recebidos</h2><p>Baixe os documentos para o computador antes de apagá-los. A exclusão libera espaço e não poderá ser desfeita.</p></div></div>
+          <section class="report-admin-list" id="report-admin-list" aria-live="polite"></section>
+          <div class="empty-state" id="report-empty-state"><div>📄</div><h2>Nenhum relatório recebido</h2><p>Os documentos enviados pelos estudantes aparecerão aqui.</p></div>
+        </section>
+
+        <section id="advisors-view" hidden>
+          <div class="requests-intro advisor-heading"><div><span class="admin-kicker">Lista pública</span><h2>Professores orientadores</h2><p>Cadastre os docentes exibidos na página “Como começar” e no formulário de solicitação de TCE.</p></div><button class="admin-button primary" id="new-advisor-button" type="button">+ Novo orientador</button></div>
+          <section class="advisor-admin-list" id="advisor-admin-list" aria-live="polite"></section>
+          <div class="empty-state" id="advisor-empty-state" hidden><div>👩‍🏫</div><h2>Nenhum orientador cadastrado</h2><p>Use “Novo orientador” para iniciar a lista.</p></div>
+        </section>
+        <section id="maintenance-view" hidden>
+          <div class="requests-intro maintenance-heading"><div><span class="admin-kicker">Saúde do sistema</span><h2>Manutenção e consumo</h2><p>Indicadores internos do projeto e atalhos para a medição oficial do Supabase.</p></div><button class="admin-button primary" id="refresh-maintenance" type="button">Atualizar indicadores</button></div>
+          <p class="maintenance-status" id="maintenance-status" role="status">Abra esta aba para consultar os indicadores.</p>
+          <section class="maintenance-grid">
+            <article class="maintenance-card database-usage"><span>Banco de dados</span><strong id="maintenance-db-size">—</strong><small id="maintenance-db-percent">Limite gratuito de referência: 500 MB</small><div class="usage-track" aria-hidden="true"><span id="maintenance-db-bar"></span></div><p>O modo somente leitura pode ser ativado quando o banco ultrapassa 500 MB no plano gratuito.</p></article>
+            <article class="maintenance-card"><span>Última movimentação</span><strong id="maintenance-last-change">—</strong><small>Última inclusão ou atualização registrada</small></article>
+            <article class="maintenance-card status-ok"><span>Conexão</span><strong id="maintenance-connection">Aguardando</strong><small>Consulta protegida pelo login da COERI</small></article>
+          </section>
+          <section class="maintenance-records" aria-label="Quantidade de registros"><article><strong id="maintenance-internships">—</strong><span>Estágios em andamento</span></article><article><strong id="maintenance-requests">—</strong><span>Novos TCEs</span></article><article><strong id="maintenance-protocols">—</strong><span>Status de protocolos</span></article><article><strong id="maintenance-agreements">—</strong><span>Convênios</span></article><article><strong id="maintenance-advisors">—</strong><span>Orientadores</span></article><article><strong id="maintenance-assignments">—</strong><span>Reservas de orientação</span></article></section>
+          <div class="maintenance-official"><div><h3>Consumo mensal oficial</h3><p>Tráfego, chamadas das funções e demais métricas são contabilizados pela organização. Consulte o painel oficial para os valores exatos do ciclo atual.</p><ul><li>Banco de dados gratuito: 500 MB por projeto.</li><li>Tráfego incluído: 5 GB por organização.</li><li>Funções: 500.000 chamadas por ciclo.</li></ul></div><div class="maintenance-links"><a class="admin-button primary" href="https://supabase.com/dashboard" target="_blank" rel="noopener">Abrir consumo no Supabase ↗</a><a class="admin-button ghost" href="https://supabase.com/dashboard" target="_blank" rel="noopener">Abrir projeto ↗</a><a href="https://supabase.com/docs/guides/platform/billing-on-supabase" target="_blank" rel="noopener">Consultar limites oficiais ↗</a></div></div>
+          <p class="maintenance-updated" id="maintenance-updated"></p>
+        </section>
+      </div>
+    </section>
+  </main>
+
+
+  <dialog id="advisor-dialog" class="admin-dialog small">
+    <form id="advisor-form" class="dialog-content">
+      <div class="dialog-header"><div><span class="admin-kicker">Lista pública</span><h2 id="advisor-dialog-title">Novo orientador</h2></div><button class="icon-button" type="button" data-close-advisor aria-label="Fechar">×</button></div>
+      <input id="advisor-id" type="hidden">
+      <div class="admin-form-grid">
+        <label class="full">Nome completo<input id="advisor-name" required maxlength="180" autocomplete="off"></label>
+        <label class="full">Cursos ou áreas que pode orientar<textarea id="advisor-areas" required maxlength="500" rows="3" placeholder="Ex.: Informática · TADS · Engenharia da Computação"></textarea></label>
+        <label>Ordem de exibição<input id="advisor-order" type="number" min="0" step="1" value="0"></label>
+        <label class="advisor-active-field"><input id="advisor-active" type="checkbox" checked> <span><strong>Exibir publicamente</strong><small>Desmarque para ocultar sem excluir o cadastro.</small></span></label>
+      </div>
+      <p class="form-message" id="advisor-message" role="alert"></p>
+      <div class="dialog-actions"><button class="admin-button danger-outline" id="delete-advisor-button" type="button" hidden>Excluir</button><span class="dialog-spacer"></span><button class="admin-button ghost" type="button" data-close-advisor>Cancelar</button><button class="admin-button primary" type="submit">Salvar orientador</button></div>
+    </form>
+  </dialog>  <dialog id="internship-dialog" class="admin-dialog">
+    <form id="internship-form" class="dialog-content">
+      <div class="dialog-header"><div><span class="admin-kicker">Cadastro</span><h2 id="internship-dialog-title">Novo estágio</h2></div><button class="icon-button" type="button" data-close-dialog aria-label="Fechar">×</button></div>
+      <input type="hidden" id="internship-id">
+      <div class="admin-form-grid">
+        <label class="full">Número do estágio<input id="internship-number" placeholder="Pode ser preenchido depois. Ex.: 001/2026"></label>
+        <label class="full">Nome completo do estudante<input id="student-name" required autocapitalize="characters" style="text-transform:uppercase"></label>
+        <label>CPF do estudante<input id="student-cpf" inputmode="numeric" maxlength="14" placeholder="000.000.000-00"></label>
+        <label>Sexo<select id="student-sex"><option value="">Preencher depois</option><option value="Feminino">Feminino</option><option value="Masculino">Masculino</option><option value="Outro">Outro</option></select></label>
+        <label>Data de nascimento<input id="student-birth-date" type="date"></label>
+        <label>E-mail institucional<input id="student-email" type="email" placeholder="Pode ser preenchido depois"></label>
+        <label>WhatsApp<input id="student-whatsapp" type="tel" placeholder="Pode ser preenchido depois"></label>
+        <label>Curso<select id="student-course" required><option value="">Selecione</option><option>Análise e Desenvolvimento de Sistemas</option><option>Automação Industrial</option><option>Engenharia de Controle e Automação</option><option>Engenharia de Computação</option><option>Técnico Integrado em Eletrotécnica</option><option>Técnico Integrado em Informática</option><option>Técnico Integrado em Administração (EJA-EPT)</option><option>Especialização em Docência para EPCT</option></select></label>
+        <label>Empresa ou unidade concedente<input id="company-name" required></label>
+        <label>Previsão de término<input id="end-date" type="date"></label>
+        <label>Entrega do relatório parcial<input id="partial-date" type="date"></label>
+        <label>Entrega do relatório final<input id="final-date" type="date"></label>
+        <label>Seguro do estagiário<select id="insurance-provider"><option value="">Preencher depois</option><option value="IFMS">IFMS</option><option value="Empresa concedente">Empresa concedente</option></select></label>
+        <label class="full">Observações<textarea id="internship-notes" rows="3" placeholder="Informações adicionais para acompanhamento"></textarea></label>
+      </div>
+      <p class="form-message" id="internship-message" role="alert"></p>
+      <div class="dialog-actions"><button class="admin-button ghost" type="button" data-close-dialog>Cancelar</button><button class="admin-button primary" type="submit">Salvar estágio</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="import-dialog" class="admin-dialog import-dialog">
+    <div class="dialog-content">
+      <div class="dialog-header"><div><span class="admin-kicker">Sistema Acadêmico</span><h2>Importar estágios do CSV</h2></div><button class="icon-button" type="button" data-close-import aria-label="Fechar">×</button></div>
+      <div class="import-instructions"><strong>Antes de importar</strong><p>Exporte o resultado com os filtros do Campus SEU CAMPUS. O arquivo será analisado no navegador e somente as alterações confirmadas serão enviadas ao banco.</p></div>
+      <label class="import-file">Arquivo CSV<input id="academic-csv-file" type="file" accept=".csv,text/csv"></label>
+      <p class="form-message" id="import-message" role="alert"></p>
+      <div id="import-summary" class="import-summary" hidden></div>
+      <div id="import-preview-wrap" class="import-preview-wrap" hidden><table class="import-preview"><thead><tr><th>Importar</th><th>Ação</th><th>ID</th><th>Estudante</th><th>Curso</th><th>Concedente</th><th>Previsão</th></tr></thead><tbody id="import-preview-body"></tbody></table></div><div id="missing-academic-section" class="missing-academic-section" hidden><div class="missing-warning"><strong>Estágios que não constam neste CSV</strong><p>Confira se o arquivo contém a lista completa de estágios em andamento. Selecione somente os que foram efetivamente concluídos e podem ser removidos do acompanhamento.</p></div><div class="import-preview-wrap"><table class="import-preview"><thead><tr><th>Concluído</th><th>ID</th><th>Número</th><th>Estudante</th><th>Curso</th><th>Previsão</th></tr></thead><tbody id="missing-academic-body"></tbody></table></div><button class="admin-button danger-outline" id="remove-missing-academic" type="button" disabled>Concluir e remover selecionados</button></div>
+      <div class="dialog-actions"><button class="admin-button ghost" type="button" data-close-import>Cancelar</button><button class="admin-button primary" id="confirm-import-button" type="button" disabled>Confirmar importação</button></div>
+    </div>
+  </dialog>
+  <dialog id="student-import-dialog" class="admin-dialog import-dialog">
+    <div class="dialog-content">
+      <div class="dialog-header"><div><span class="admin-kicker">Dados acadêmicos</span><h2>Complementar dados dos estudantes</h2></div><button class="icon-button" type="button" data-close-student-import aria-label="Fechar">×</button></div>
+      <div class="import-instructions"><strong>Somente complementação</strong><p>Esta importação não cria estágios e não substitui informações existentes. Serão preenchidos apenas CPF, nascimento, e-mail, telefone, matrícula e RA que estiverem vazios.</p></div>
+      <label class="import-file">Arquivo CSV<input id="student-csv-file" type="file" accept=".csv,text/csv"></label><label class="import-option"><input id="replace-student-emails" type="checkbox"> <span><strong>Substituir e-mails já cadastrados</strong><small>Quando marcado, o e-mail do CSV substituirá um e-mail diferente que já esteja salvo.</small></span></label>
+      <p class="form-message" id="student-import-message" role="alert"></p>
+      <div id="student-import-summary" class="import-summary" hidden></div>
+      <div id="student-import-preview-wrap" class="import-preview-wrap" hidden><table class="import-preview"><thead><tr><th>Atualizar</th><th>Ação</th><th>Estudante</th><th>CPF</th><th>E-mail</th><th>Nascimento</th><th>Telefone</th></tr></thead><tbody id="student-import-preview-body"></tbody></table></div>
+      <div class="dialog-actions"><button class="admin-button ghost" type="button" data-close-student-import>Cancelar</button><button class="admin-button primary" id="confirm-student-import" type="button" disabled>Confirmar complementação</button></div>
+    </div>
+  </dialog>
+  <dialog id="agreement-import-dialog" class="admin-dialog import-dialog">
+    <div class="dialog-content"><div class="dialog-header"><div><span class="admin-kicker">Empresas conveniadas</span><h2>Importar convênios do CSV</h2></div><button class="icon-button" type="button" data-close-agreement-import aria-label="Fechar">×</button></div><div class="import-instructions"><strong>Atualização da página pública</strong><p>Confira as inclusões e alterações antes de confirmar. Convênios vencidos serão exibidos automaticamente na aba “Inativos”; o arquivo CSV não será armazenado.</p></div><label class="import-file">Arquivo CSV<input id="agreement-csv-file" type="file" accept=".csv,text/csv"></label><p class="form-message" id="agreement-import-message" role="alert"></p><div id="agreement-import-summary" class="import-summary" hidden></div><div id="agreement-import-preview-wrap" class="import-preview-wrap" hidden><table class="import-preview"><thead><tr><th>Importar</th><th>Ação</th><th>ID</th><th>Número</th><th>Instituição externa</th><th>Início</th><th>Fim</th></tr></thead><tbody id="agreement-import-preview-body"></tbody></table></div><div class="dialog-actions"><button class="admin-button ghost" type="button" data-close-agreement-import>Cancelar</button><button class="admin-button primary" id="confirm-agreement-import" type="button" disabled>Confirmar importação</button></div></div>
+  </dialog>
+  <dialog id="message-dialog" class="admin-dialog small">
+    <div class="dialog-content"><div class="dialog-header"><div><span class="admin-kicker">Lembrete</span><h2 id="message-title">Mensagem ao estudante</h2></div><button class="icon-button" type="button" data-close-message aria-label="Fechar">×</button></div><label class="message-label">Texto da mensagem<textarea id="message-text" rows="9"></textarea></label><div class="dialog-actions"><button class="admin-button ghost" id="copy-message" type="button">Copiar texto</button><a class="admin-button primary" id="open-email" href="#">Abrir no e-mail</a></div></div>
+  </dialog>
+
+  <dialog id="tce-dialog" class="admin-dialog tce-dialog">
+    <form id="tce-process-form" class="dialog-content">
+      <div class="dialog-header"><div><span class="admin-kicker">Solicitação recebida</span><h2 id="tce-dialog-title">Novo TCE</h2></div><button class="icon-button" type="button" data-close-tce aria-label="Fechar">×</button></div>
+      <div id="tce-request-details" class="tce-request-details"></div>
+      <section class="process-box status-box">
+        <h3>Status público da solicitação</h3>
+        <p>O estudante verá somente o status, a observação e a data da atualização ao consultar o protocolo.</p>
+        <div class="admin-form-grid">
+          <label class="full">Status<select id="tce-public-status"><option value="recebido">Recebido pela COERI</option><option value="em_processamento">Em processamento pela COERI</option><option value="pendente_correcao">Pendente de correção</option><option value="tce_gerado">TCE gerado e encaminhado para assinaturas</option><option value="tce_negado">TCE negado — consulte a COERI</option></select></label>
+          <label class="full" id="tce-public-note-field">Observações para o estudante<textarea id="tce-public-note" rows="3" maxlength="1000" placeholder="Informe o que deve ser corrigido ou complementado."></textarea></label>
+          <label class="full" id="tce-document-url-field" hidden>Link do documento no Autentique<input id="tce-document-url" type="url" maxlength="1000" placeholder="https://app.autentique.com.br/..."></label>
+        </div>
+        <p class="form-message" id="tce-status-message" role="alert"></p>
+        <div class="status-actions"><button class="admin-button ghost" id="save-tce-status" type="button">Salvar status e observação</button></div>
+      </section>
+      <section class="process-box">
+        <h3>Registrar no acompanhamento</h3>
+        <p>Ao confirmar, os dados completos desta solicitação serão apagados. Permanecerão somente os dados necessários ao acompanhamento.</p>
+        <div class="admin-form-grid">
+          <label class="full">Número do estágio<input id="tce-internship-number" placeholder="Ex.: 001/2026"></label>
+          <label>Entrega do relatório parcial<input id="tce-partial-date" type="date"></label>
+          <label>Entrega do relatório final<input id="tce-final-date" type="date"></label>
+          <label class="full">Seguro do estagiário<select id="tce-insurance-provider" required><option value="">Selecione</option><option value="IFMS">IFMS</option><option value="Empresa concedente">Empresa concedente</option></select></label>
+        </div>
+      </section>
+      <input id="tce-request-id" type="hidden">
+      <p class="form-message" id="tce-process-message" role="alert"></p>
+      <div class="dialog-actions split-actions"><button class="admin-button danger-outline" id="delete-tce-request" type="button">Excluir solicitação</button><span></span><button class="admin-button ghost" type="button" data-close-tce>Cancelar</button><button class="admin-button primary" id="generate-tce-button" type="submit" formnovalidate>Gerar TCE</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="password-dialog" class="admin-dialog small">
+    <form id="password-form" class="dialog-content">
+      <div class="dialog-header"><div><span class="admin-kicker">Primeiro acesso</span><h2>Crie sua senha</h2></div></div>
+      <p>Defina uma senha permanente para os próximos acessos ao painel.</p>
+      <div class="admin-form-grid">
+        <label class="full">Nova senha<input id="new-password" type="password" autocomplete="new-password" required minlength="8"></label>
+        <label class="full">Confirme a nova senha<input id="confirm-password" type="password" autocomplete="new-password" required minlength="8"></label>
+      </div>
+      <p class="form-message" id="password-message" role="alert"></p>
+      <div class="dialog-actions"><button class="admin-button primary" type="submit">Salvar senha e entrar</button></div>
+    </form>
+  </dialog>
+
+  <template id="internship-card-template"><article class="internship-card"><div class="status-stripe"></div><div class="internship-main"><div class="internship-top"><div><span class="status-pill"></span><div class="internship-number"></div><h2 class="student-name"></h2><p class="course-company"></p></div><button class="icon-button menu-action" type="button" aria-label="Editar cadastro">Editar</button></div><div class="contact-row"><a class="student-email"></a><a class="student-whatsapp"></a><span class="insurance"></span></div><div class="deadline-grid"><div class="deadline partial"><span>Relatório parcial</span><strong></strong><small></small><label class="sent-check"><input class="reminder-sent" data-reminder-type="partial" type="checkbox"> Aviso enviado</label></div><div class="deadline final"><span>Relatório final</span><strong></strong><small></small><label class="sent-check"><input class="reminder-sent" data-reminder-type="final" type="checkbox"> Aviso enviado</label></div><div class="deadline end"><span>Previsão de término</span><strong></strong><small></small></div></div><details class="notes-wrap"><summary>Ver observações</summary><div class="notes"></div></details><div class="card-actions"><button class="admin-button reminder partial-reminder" type="button">Mensagem: parcial</button><button class="admin-button reminder final-reminder" type="button">Mensagem: final</button><button class="admin-button complete-button" type="button">Marcar como concluído</button></div></div></article></template>
+
+  <script src="assets/supabase-config.js?v=20260720-1"></script>
+  <script type="module" src="assets/admin.js?v=20260729-1"></script>
+</body>
+</html>
